@@ -4,9 +4,9 @@ from datasets import DatasetDict, load_dataset
 dataset = load_dataset("Youseff1987/resume-matching-dataset-v2")
 
 # 소량 샘플 개수 설정
-train_sample_size = 200
-val_sample_size = 50
-test_sample_size = 50
+train_sample_size = 6500
+val_sample_size = 100
+test_sample_size = 500
 
 # 데이터 섞고 추출 (필요시)
 small_train = dataset["train"].shuffle(seed=42).select(range(train_sample_size))
