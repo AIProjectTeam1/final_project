@@ -52,6 +52,8 @@ total_f1_files = []
 
 for file_name in file_list:
     df = pd.read_csv(file_name, header=None, encoding="utf-8")
+    
+    df = df.iloc[1:]
     references = df[0].astype(str).tolist() # col 0 : references (정답)
     candidates = df[1].astype(str).tolist() # col 1 : candidates (생성)
     _, _, F1 =  scorer.score(candidates, references)
