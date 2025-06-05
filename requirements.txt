@@ -6,3 +6,4 @@ bitsandbytes>=0.39.0
 torch>=2.0.0
 sentencepiece
 numpy>=1.21.0,<1.26.0
+sentence_transformers
