@@ -8,6 +8,13 @@ from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model
 import wandb
 from prompts import prompt_templates
 
+from transformers import TrainerCallback, TrainerState, TrainerControl
+
+class WandbEvalLossLogger(TrainerCallback):
+    def on_evaluate(self, args, state: TrainerState, control: TrainerControl, metrics=None, **kwargs):
+        if metrics and "eval_loss" in metrics:
+            wandb.log({"eval_loss": metrics["eval_loss"]}, step=state.global_step)
+
 def parse_evaluation(xml_string):
     root = ET.fromstring(xml_string)
     return {child.tag: child.text for child in root}
@@ -22,19 +29,6 @@ def tokenize(example, tokenizer):
     return tokenizer(example["text"], truncation=True)
 
 def train(config):
-    # wandb.init() 호출 (이미 init 되어있으면 안 함)
-    if not wandb.run:
-        # config가 dict나 Namespace 형태가 아니라면 vars() 호출 방어
-        config_for_wandb = config
-        if hasattr(config, "__dict__"):
-            config_for_wandb = vars(config)
-        elif not isinstance(config, dict):
-            config_for_wandb = dict(config)
-        wandb.init(project="resume_eval", config=config_for_wandb)
-
-    # 이제 wandb.config로 접근 가능
-    cfg = wandb.config
-
     # Load dataset
     dataset = load_from_disk("small_resume_dataset_final")
     dataset["train"] = dataset["train"].select(range(1000))
@@ -58,7 +52,7 @@ def train(config):
 
     model = prepare_model_for_kbit_training(model)
     lora_config = LoraConfig(
-        r=cfg.lora_r,
+        r=config.lora_r,
         lora_alpha=32,
         lora_dropout=0.05,
         bias="none",
@@ -67,7 +61,7 @@ def train(config):
     )
     model = get_peft_model(model, lora_config)
 
-    prompt_fn = prompt_templates[cfg.prompt_version]
+    prompt_fn = prompt_templates[config.prompt_version]
 
     def example_format_fn(example):
         return format_example(example, tokenizer, prompt_fn)
@@ -82,19 +76,18 @@ def train(config):
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False, pad_to_multiple_of=64)
 
     training_args = TrainingArguments(
-        output_dir=cfg.output_dir if hasattr(cfg, 'output_dir') else "./qlora-output",
-        per_device_train_batch_size=cfg.batch_size,
-        per_device_eval_batch_size=cfg.batch_size,
-        gradient_accumulation_steps=cfg.gradient_accumulation_steps if hasattr(cfg, 'gradient_accumulation_steps') else 8,
-        learning_rate=cfg.learning_rate,
-        num_train_epochs=cfg.num_train_epochs,
+        output_dir=config.output_dir if hasattr(config, 'output_dir') else "./qlora-output",
+        per_device_train_batch_size=config.batch_size,
+        per_device_eval_batch_size=config.batch_size,
+        gradient_accumulation_steps=config.gradient_accumulation_steps if hasattr(config, 'gradient_accumulation_steps') else 8,
+        learning_rate=config.learning_rate,
+        num_train_epochs=config.num_train_epochs,
         fp16=True,
-        eval_strategy="steps",
-        eval_steps=10,
+        eval_strategy="epoch",
         save_strategy="epoch",
         logging_dir="./logs",
         logging_steps=10,
-        report_to="wandb" if (hasattr(cfg, 'use_wandb') and cfg.use_wandb) else "none",
+        report_to="wandb" if (hasattr(config, 'use_wandb') and config.use_wandb) else "none",
         save_total_limit=2,
         gradient_checkpointing=True,
     )
@@ -106,6 +99,7 @@ def train(config):
         eval_dataset=dataset["validation"],
         tokenizer=tokenizer,
         data_collator=data_collator,
+        callbacks=[WandbEvalLossLogger()],
     )
 
     trainer.train()
@@ -126,8 +120,9 @@ def main():
     args = parser.parse_args()
 
     if args.use_wandb:
-        # wandb.init()는 train에서 처리하므로 여기서는 config만 넘김
-        config = args
+        config_dict = vars(args)
+        wandb.init(config=config_dict)
+        config = wandb.config
     else:
         config = args
 
