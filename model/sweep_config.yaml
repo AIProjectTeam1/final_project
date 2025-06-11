@@ -1,0 +1,24 @@
+method: bayes
+metric:
+  name: eval_loss
+  goal: minimize
+
+parameters:
+  prompt_version:
+    values: ["v2_all_eval_formatted", "v2_minimal", "v2_explicit_guidelines_ko_improved"]
+
+  learning_rate:
+    min: 0.00001 #1e-5
+    max: 0.0005 #5e-4
+
+  num_train_epochs:
+    values: [3, 5]
+
+  batch_size:
+    value: 2
+
+  gradient_accumulation_steps:
+    values: [4, 8, 16]
+
+  lora_r:
+    values: [4, 8, 16]
