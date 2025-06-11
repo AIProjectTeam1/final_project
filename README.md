@@ -74,4 +74,4 @@ The `sweep_runner.py` script internally registers the sweep and uses `wandb.agen
 
 ## Sweep Results
 
-[https://wandb.ai/codream00-sungkyunkwan-university/resume_eval_ko_sweep/sweeps/3yle2pch?nw=nwusercodream00](https://wandb.ai/codream00-sungkyunkwan-university/resume_eval_ko_sweep/sweeps/3yle2pch?nw=nwusercodream00)
+[https://wandb.ai/codream00-sungkyunkwan-university/resume_eval_ko_sweep/sweeps/j3mollrq?nw=nwusercodream00](https://wandb.ai/codream00-sungkyunkwan-university/resume_eval_ko_sweep/sweeps/j3mollrq?nw=nwusercodream00)

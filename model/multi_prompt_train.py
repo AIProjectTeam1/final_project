@@ -37,6 +37,7 @@ def train(config):
 
     # Load dataset
     dataset = load_from_disk("small_resume_dataset_final")
+    dataset["train"] = dataset["train"].select(range(1000))
 
     # Load model & tokenizer
     bnb_config = BitsAndBytesConfig(
