@@ -11,9 +11,16 @@ from prompts import prompt_templates
 from transformers import TrainerCallback, TrainerState, TrainerControl
 
 class WandbEvalLossLogger(TrainerCallback):
+    def __init__(self, stage=0):
+        self.stage = stage
+
     def on_evaluate(self, args, state: TrainerState, control: TrainerControl, metrics=None, **kwargs):
         if metrics and "eval_loss" in metrics:
-            wandb.log({"eval_loss": metrics["eval_loss"]}, step=state.global_step)
+            wandb.log({
+                "eval_loss": metrics["eval_loss"],
+                "stage": self.stage
+            }, step=state.global_step)
+
 
 def parse_evaluation(xml_string):
     root = ET.fromstring(xml_string)
@@ -28,10 +35,19 @@ def format_example(example, tokenizer, prompt_fn):
 def tokenize(example, tokenizer):
     return tokenizer(example["text"], truncation=True)
 
+def get_curriculum_splits(dataset, num_stages=2):
+    import numpy as np
+    scores = np.array([item['selfintro_score'] for item in dataset])
+    high_threshold = np.percentile(scores, 75)
+    low_threshold = np.percentile(scores, 25)
+    clear_indices = np.where((scores >= high_threshold) | (scores <= low_threshold))[0]
+    ambiguous_indices = np.where((scores < high_threshold) & (scores > low_threshold))[0]
+    return [clear_indices, ambiguous_indices]
+
 def train(config):
     # Load dataset
     dataset = load_from_disk("small_resume_dataset_final")
-    dataset["train"] = dataset["train"].select(range(1000))
+    # dataset["train"] = dataset["train"].select(range(1000))
 
     # Load model & tokenizer
     bnb_config = BitsAndBytesConfig(
@@ -69,10 +85,6 @@ def train(config):
     def example_tokenize_fn(example):
         return tokenize(example, tokenizer)
 
-    for split in ["train", "validation"]:
-        dataset[split] = dataset[split].map(example_format_fn)
-        dataset[split] = dataset[split].map(example_tokenize_fn, remove_columns=dataset[split].column_names)
-
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False, pad_to_multiple_of=64)
 
     training_args = TrainingArguments(
@@ -92,18 +104,50 @@ def train(config):
         gradient_checkpointing=True,
     )
 
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=dataset["train"],
-        eval_dataset=dataset["validation"],
-        tokenizer=tokenizer,
-        data_collator=data_collator,
-        callbacks=[WandbEvalLossLogger()],
-    )
+    # Curriculum Learning 여부에 따른 분기
+    if hasattr(config, "use_curriculum") and config.use_curriculum:
+        print("\n=== Using Curriculum Learning ===")
+        stages = get_curriculum_splits(dataset["train"])
 
-    trainer.train()
-    trainer.save_model(training_args.output_dir)
+        for stage_idx, indices in enumerate(stages):
+            print(f"\n--- Training Stage {stage_idx + 1} ---")
+            stage_dataset = dataset["train"].select(indices)
+            stage_dataset = stage_dataset.map(example_format_fn)
+            stage_dataset = stage_dataset.map(example_tokenize_fn, remove_columns=stage_dataset.column_names)
+
+            val_dataset = dataset["validation"].map(example_format_fn)
+            val_dataset = val_dataset.map(example_tokenize_fn, remove_columns=val_dataset.column_names)
+
+            trainer = Trainer(
+                model=model,
+                args=training_args,
+                train_dataset=stage_dataset,
+                eval_dataset=val_dataset,
+                tokenizer=tokenizer,
+                data_collator=data_collator,
+                callbacks=[WandbEvalLossLogger(stage=stage_idx + 1)],
+            )
+            trainer.train()
+            trainer.save_model(f"{training_args.output_dir}/stage_{stage_idx + 1}")
+    else:
+        print("\n=== Training Without Curriculum ===")
+        dataset["train"] = dataset["train"].map(example_format_fn)
+        dataset["train"] = dataset["train"].map(example_tokenize_fn, remove_columns=dataset["train"].column_names)
+        dataset["validation"] = dataset["validation"].map(example_format_fn)
+        dataset["validation"] = dataset["validation"].map(example_tokenize_fn, remove_columns=dataset["validation"].column_names)
+
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=dataset["train"],
+            eval_dataset=dataset["validation"],
+            tokenizer=tokenizer,
+            data_collator=data_collator,
+            callbacks=[WandbEvalLossLogger()],
+        )
+
+        trainer.train()
+        trainer.save_model(training_args.output_dir)
 
 
 def main():
@@ -117,11 +161,23 @@ def main():
     parser.add_argument("--lora_r", type=int, default=8)
     parser.add_argument("--use_wandb", action='store_true')
     parser.add_argument("--output_dir", type=str, default="./qlora-output")
+    parser.add_argument("--use_curriculum", action='store_true')
+
     args = parser.parse_args()
 
+    
+
     if args.use_wandb:
+        from datetime import datetime
+
+        now = datetime.now().strftime("%Y%m%d-%H%M%S")
+
+        name = f"train_{args.prompt_version}" + \
+            ("_curriculum" if args.use_curriculum else "_nocurriculum") + \
+            f"_{now}"
+        
         config_dict = vars(args)
-        wandb.init(config=config_dict)
+        wandb.init(config=config_dict, project="resume_eval", name=name)
         config = wandb.config
     else:
         config = args
