@@ -134,16 +134,61 @@ For detailed sweep results, please visit the [W&B project dashboard](https://wan
 |--------------------------------------------|-------------------|------------------------|
 | Trained with Pseudo-label – Inference: Off   | 0.8260        | 0.8302             |
 | Trained with Pseudo-label – Inference: On    | 0.8482            | 0.8501                 |
+
+##### Pseudo-label KoSIMCSE
+| User Context                               | Not Included      | Included |
+|--------------------------------------------|-------------------|------------------------|
+| Keyword Label   | 0.8136            | 0.8255             |
+| Job Label       | 0.8186            | 0.8203                 |
+| Resume Label    | 0.8214            | 0.8372                 |
+
+**Note on Evaluation Metrics**  
+- **Keyword Label** score is based on the **Self-Introduction Similarity**.  
+- **Job Label** score is calculated as the **average of Resume Similarity and Self-Introduction Similarity**.  
+- **Resume Label** score is based solely on **Resume Similarity**.
+
 ##### Reference
 > 정개발의 이력서는 포지션에 요구하는 기술과 경험이 잘 부합하며, 특히 C# 및 .NET Core를 활용한 경험과 SQL Server에 대한 기본적 이해가 강조되어 있습니다. 게임 개발 동아리에서의 팀 프로젝트 참여는 경험을 더해주며, RabbitMQ 및 Azure App Service와 같은 관련 툴에 대한 경험도 긍정적인 요소입니다. 자격요건을 충족하고, 우대사항에서도 RabbitMQ 사용 경험이 있어 높은 점수를 부여합니다.
 
-##### Trained with Pseudo-label - Inference: Off
+##### Trained with Pseudo-label - User Context Not Included
 > 정개발의 이력서는 신입 개발자로서의 기본적인 자격요건을 충족하고 있으며, 관련 프로젝트 경험이 있어 긍정적입니다. 그러나, 경력이 부족하고, 기술적 깊이가 부족한 점이 아쉽습니다. 특히, 지원하는 포지션에 대한 구체적인 경험이 부족하여 감점이 있었습니다.
 
-##### Trained with Pseudo-label - Inference: ON
+##### Trained with Pseudo-label - User Context included
 > 정개발 지원자의 이력서는 포지션에 적합한 기술과 경험을 잘 보여주고 있습니다. C# 및.NET Core, SQL Server, RabbitMQ, Azure App Service 등 요구되는 기술 스택을 모두 갖추고 있으며, 게임 개발 동아리에서의 경험은 특히 긍정적입니다. 그러나, 경력이 신입 수준으로 제한적이며, 우대사항 중 RabbitMQ 사용 경험이 기본적인 수준에 그치고 있어 감점이 있었습니다. 전반적으로 이력서는 매우 우수하며, 포지션에 적합한 인재로 평가됩니다.
 
-#### Experimental Results: KoSimCSE Similarity by Training Strategy
+### Prompt Learning
+#### Hard Prompt
+##### Hard Prompt A
+```json
+[
+  {"role": "system", "content": "You are an assistant that evaluates resume documents."},
+  {"role": "user", "content": "[Job-Post]\n...\n[Resume]\n...\n[Keywords]\n...\n[Self-Introduction]\n..."},
+  {"role": "assistant", "content": "[eval_resume]: ...\n[eval_selfintro]: ...\n[summary]: ..."}
+]
+```
+- Provides basic system role and separates sections with labels. Output is structured with labels, but no explicit evaluation guidelines are given.
+
+##### Hard Prompt B
+```json
+[
+  {"role": "system", "content": "Evaluate resumes."},
+  {"role": "user", "content": "Job: ...\nResume: ...\nKeywords: ...\nSelf-Introduction: ..."},
+  {"role": "assistant", "content": "...eval_resume text...\n...eval_selfintro text...\n...summary text..."}
+]
+```
+- A minimal and concise format suitable for fast testing. It lacks output labels and guidance, which may reduce consistency.
+
+##### Hard Prompt C
+```json
+[
+  {"role": "system", "content": "당신은 숙련된 인사(HR) 어시스턴트입니다. ... (평가 지침 포함)"},
+  {"role": "user", "content": "[직무 공고] ...\n[이력서] ...\n[키워드] ...\n[자기소개서] ...\n**평가 지침** ..."},
+  {"role": "assistant", "content": "[summary]: ...\n[eval_resume]: ...\n[eval_selfintro]: ..."}
+]
+```
+- Includes explicit evaluation guidelines in Korean, making it the most structured and informative prompt. Helps maintain consistent quality and format across outputs.
+
+### Experimental Results: KoSimCSE Similarity by Training Strategy
 
 | Configuration (Training Strategy)              | Resume Similarity | Self-Intro Similarity |
 |-----------------------------------------------|-------------------|------------------------|
