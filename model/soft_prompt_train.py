@@ -84,7 +84,7 @@ def main(args):
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         learning_rate=args.learning_rate,
         num_train_epochs=args.num_train_epochs,
-        fp16=True,
+        fp16=False,
         eval_strategy="steps",
         eval_steps=args.eval_steps,
         save_strategy="epoch",
