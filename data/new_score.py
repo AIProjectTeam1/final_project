@@ -62,9 +62,9 @@ file_path = "../model/eval/"
 file_ext = ".csv"
 file_list = [
     "exaone-3.5_baseline_eval_resume_250531",
-    "guideline_no_pseudo-label_resume",
+    "inference_results_resume",
     "exaone-3.5_baseline_eval_selfintro_250531",
-    "guideline_no_pseudo-label_selfintro"
+    "inference_results_selfintro"
 ]
 
 mode = int(input("select_mode (0 -> resume, 1 -> self_intro) : "))
