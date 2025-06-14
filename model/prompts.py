@@ -185,6 +185,41 @@ summary: 전체적인 인상 및 채용 적합성 요약
     }, ensure_ascii=False)}
     ]
 
+def prompt_for_soft_prompt(example, eval_dict):
+    """
+    Soft prompt를 위한 예시 포맷
+    """
+    job_text = format_dict_to_string(example['job_analysis'])
+    resume_text = format_dict_to_string(example['resume_analysis'])
+    keywords_text = format_dict_to_string(example['keywords_analysis'])
+    messages = [
+        {"role": "system", "content": "당신은 숙련된 인사(HR) 어시스턴트입니다. 지원자의 이력서와 자기소개서를 직무 요구사항에 맞추어 평가해 주세요."},
+        {"role": "user", "content": f"""아래 내용을 보고 이력서, 자기소개서, 종합 평가를 3~5문장으로 작성해 주세요.
+직무 공고:
+{job_text}
+
+이력서:
+{resume_text}
+
+키워드:
+{keywords_text}
+
+자기소개서:
+{example['selfintro']}
+
+답변 형식:
+eval_resume: ...
+eval_selfintro: ...
+summary: ...
+"""},
+    {"role": "assistant", "content": f"""eval_resume: {eval_dict.get("eval_resume", "")}
+    eval_selfintro: {eval_dict.get("eval_selfintro", "")}
+    summary: {eval_dict.get("summary", "")}"""}]
+    return messages
+    
+
+    
+
 prompt_templates = {
     "v1_selfintro_only": prompt_v1_selfintro_only,
     "v2_all_eval": prompt_v2_all_eval,
@@ -193,7 +228,8 @@ prompt_templates = {
     "v2_explicit_guidelines_ko_improved": prompt_v2_explicit_guidelines_ko_improved,
     "v2_explicit_guidelines_ko_improved_json": prompt_v2_explicit_guidelines_ko_improved_json,
     "v2_explicit_guidelines_ko_improved_formated": prompt_v2_explicit_guidelines_ko_improved_formated,
-    "v2_explicit_guidelines_ko_improved_no_pseudo_label": prompt_v2_explicit_guidelines_ko_improved_no_pseudo_label
+    "v2_explicit_guidelines_ko_improved_no_pseudo_label": prompt_v2_explicit_guidelines_ko_improved_no_pseudo_label,
+    "prompt_for_soft_prompt": prompt_for_soft_prompt,
 }
 
 def build_prompt_messages(example, prompt_version="v2_all_eval_formatted", eval_dict=None):
