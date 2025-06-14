@@ -11,15 +11,17 @@ from prompts import prompt_templates
 from transformers import TrainerCallback, TrainerState, TrainerControl
 
 class WandbEvalLossLogger(TrainerCallback):
-    def __init__(self, stage=0):
+    def __init__(self, stage=0, prev_steps=0):
         self.stage = stage
+        self.prev_steps = prev_steps
 
     def on_evaluate(self, args, state: TrainerState, control: TrainerControl, metrics=None, **kwargs):
         if metrics and "eval_loss" in metrics:
             wandb.log({
                 "eval_loss": metrics["eval_loss"],
                 "stage": self.stage
-            }, step=state.global_step)
+            }, step=self.prev_steps + state.global_step)  # 누적 step으로 로그 찍기
+
 
 
 def parse_evaluation(xml_string):
@@ -109,6 +111,8 @@ def train(config):
         print("\n=== Using Curriculum Learning ===")
         stages = get_curriculum_splits(dataset["train"])
 
+        prev_steps = 0  # 누적 step 저장
+
         for stage_idx, indices in enumerate(stages):
             print(f"\n--- Training Stage {stage_idx + 1} ---")
             stage_dataset = dataset["train"].select(indices)
@@ -125,10 +129,14 @@ def train(config):
                 eval_dataset=val_dataset,
                 tokenizer=tokenizer,
                 data_collator=data_collator,
-                callbacks=[WandbEvalLossLogger(stage=stage_idx + 1)],
+                callbacks=[WandbEvalLossLogger(stage=stage_idx + 1, prev_steps=prev_steps)],
             )
+
             trainer.train()
             trainer.save_model(f"{training_args.output_dir}/stage_{stage_idx + 1}")
+
+            # 현재까지의 학습 step을 누적
+            prev_steps += trainer.state.global_step
     else:
         print("\n=== Training Without Curriculum ===")
         dataset["train"] = dataset["train"].map(example_format_fn)
