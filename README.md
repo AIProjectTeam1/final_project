@@ -188,6 +188,14 @@ For detailed sweep results, please visit the [W&B project dashboard](https://wan
 ```
 - Includes explicit evaluation guidelines in Korean, making it the most structured and informative prompt. Helps maintain consistent quality and format across outputs.
 
+##### Prompt KoSimCSE results
+| Prompts              | Resume Similarity | Self-Intro Similarity |
+|-----------------------------------------------|-------------------|------------------------|
+| Hard Prompt A       | 0.8281            | 0.8237                 |
+| Hard Prompt B       | 0.8174            | 0.8259                 |
+| Hard Prompt C       | 0.8330            | 0.8359                 |
+| Soft Prompt         | -            | -                 |
+
 ### Experimental Results: KoSimCSE Similarity by Training Strategy
 
 | Configuration (Training Strategy)              | Resume Similarity | Self-Intro Similarity |
