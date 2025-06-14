@@ -194,7 +194,7 @@ For detailed sweep results, please visit the [W&B project dashboard](https://wan
 | Hard Prompt A       | 0.8281            | 0.8237                 |
 | Hard Prompt B       | 0.8174            | 0.8259                 |
 | Hard Prompt C       | 0.8330            | 0.8359                 |
-| Soft Prompt         | -            | -                 |
+| Soft Prompt         | 0.8682            | 0.8598                 |
 
 ### Experimental Results: KoSimCSE Similarity by Training Strategy
 
@@ -203,6 +203,7 @@ For detailed sweep results, please visit the [W&B project dashboard](https://wan
 | Trained with Basic Prompt                  | 0.7899            | 0.8080                 |
 | Trained with Explicit Guideline Prompt     | 0.8482            | 0.8501                 |
 | Trained with Explicit Guideline + Curriculum | 0.8491            | 0.8276                 |
+| + Soft Prompt | 0.8682             | 0.8598                 |
 
 > All models share the same base (EXAONE-3.5), and the similarity scores represent average values measured by KoSimCSE.
 
