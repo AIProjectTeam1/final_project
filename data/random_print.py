@@ -21,3 +21,5 @@ for idx, row in sample_rows.iterrows():
     print(f"\n[Row {idx}]")
     print(f"원본(정답) : {row[0]}")
     print(f"\n생성 : {row[1]}")
+    print(f"\n : {row[1]}")
+    

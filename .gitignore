@@ -37,9 +37,13 @@ ENV/
 # Model checkpoints and outputs
 qlora-curriculum-output/
 logs/
+wandb/
+qlora-output/
+model-output/
 
 # Dataset
 small_resume_dataset_final/
+small_resume_dataset_with_keywords/
 
 # OS
 .DS_Store
