@@ -1,3 +1,7 @@
+# DPO-UA Framework
+
+![DPO-UA Framework](images/framework.png)
+
 ## 🚀 How to Run
 
 ### 1. Run a Single Training Experiment
